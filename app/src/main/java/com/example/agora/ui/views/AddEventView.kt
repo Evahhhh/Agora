@@ -42,18 +42,19 @@ fun AddEventView(
     val loading by viewModel.loading.collectAsState()
     val message by viewModel.message.collectAsState()
 
+    // Champs du formulaire
     var name by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
     var place by remember { mutableStateOf("") }
     var date by remember { mutableStateOf("") }
     var time by remember { mutableStateOf("") }
     var photoUrls by remember { mutableStateOf("") }
-
     var selectedCity by remember { mutableStateOf<String?>(null) }
-    var selectedTypes by remember { mutableStateOf(setOf<String>()) } // <- immutable set
+    var selectedTypes by remember { mutableStateOf(setOf<String>()) }
 
     val calendar = Calendar.getInstance()
 
+    // Pickers
     val datePickerDialog = remember {
         DatePickerDialog(
             activity,
@@ -78,10 +79,23 @@ fun AddEventView(
         )
     }
 
+    // Affichage du message Toast
     LaunchedEffect(message) {
         message?.let {
             Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
             viewModel.clearMessage()
+
+            // Si succès, on peut réinitialiser les champs
+            if (it.contains("succès")) {
+                name = ""
+                description = ""
+                place = ""
+                date = ""
+                time = ""
+                photoUrls = ""
+                selectedCity = null
+                selectedTypes = emptySet()
+            }
         }
     }
 
@@ -98,6 +112,7 @@ fun AddEventView(
             Text("Ajouter un événement", style = MaterialTheme.typography.headlineSmall)
         }
 
+        // Nom
         item {
             OutlinedTextField(
                 value = name,
@@ -107,6 +122,7 @@ fun AddEventView(
             )
         }
 
+        // Lieu
         item {
             OutlinedTextField(
                 value = place,
@@ -116,6 +132,7 @@ fun AddEventView(
             )
         }
 
+        // Description
         item {
             OutlinedTextField(
                 value = description,
@@ -126,34 +143,46 @@ fun AddEventView(
             )
         }
 
+        // Date et Heure
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(
-                    value = date,
-                    onValueChange = {},
-                    readOnly = true,
-                    label = { Text("Date") },
+                Box(
                     modifier = Modifier
                         .weight(1f)
                         .clickable { datePickerDialog.show() }
-                )
-                OutlinedTextField(
-                    value = time,
-                    onValueChange = {},
-                    readOnly = true,
-                    label = { Text("Heure") },
+                ) {
+                    OutlinedTextField(
+                        value = date,
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("Date") },
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = false
+                    )
+                }
+                Box(
                     modifier = Modifier
                         .weight(1f)
                         .clickable { timePickerDialog.show() }
-                )
+                ) {
+                    OutlinedTextField(
+                        value = time,
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("Heure") },
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = false
+                    )
+                }
             }
         }
 
+        // URLs photos
         item {
             OutlinedTextField(
                 value = photoUrls,
                 onValueChange = { photoUrls = it },
-                label = { Text("URLs photos") },
+                label = { Text("URLs photos (séparés par des virgules)") },
                 modifier = Modifier.fillMaxWidth(),
                 minLines = 2
             )
@@ -167,7 +196,8 @@ fun AddEventView(
                 onExpandedChange = { expanded = !expanded }
             ) {
                 TextField(
-                    value = cities.find { it.id == selectedCity }?.let { "${it.name} (${it.departmentName})" } ?: "Sélectionner une ville",
+                    value = cities.find { it.id == selectedCity }?.let { "${it.name} (${it.departmentName})" }
+                        ?: "Sélectionner une ville",
                     onValueChange = {},
                     readOnly = true,
                     label = { Text("Ville") },
