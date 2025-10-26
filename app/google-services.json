@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "234297860083",
+    "project_id": "agora-53147",
+    "storage_bucket": "agora-53147.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:234297860083:android:a48155dd8792ae20cebc86",
+        "android_client_info": {
+          "package_name": "com.example.agora"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBQnrexQiipSlC4QbNaBsmZUCLgRAgDJEo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

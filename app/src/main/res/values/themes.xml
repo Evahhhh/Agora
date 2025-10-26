@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <style name="Theme.Agora" parent="android:Theme.Material.Light.NoActionBar" />
+
+    <style name="Theme.Agora.NoActionBar">
+        <item name="windowActionBar">false</item>
+        <item name="windowNoTitle">true</item>
+    </style>
+
+    <style name="Theme.Agora.AppBarOverlay" parent="ThemeOverlay.AppCompat.Dark.ActionBar" />
+
+    <style name="Theme.Agora.PopupOverlay" parent="ThemeOverlay.AppCompat.Light" />
+</resources>
