@@ -22,24 +22,35 @@ import com.example.agora.viewmodel.EventUI
 import com.example.agora.viewmodel.EventViewModel
 import androidx.compose.foundation.layout.FlowRow
 import androidx.navigation.NavController
+import com.google.firebase.auth.FirebaseAuth
 
 @Composable
-fun EventListView(eventViewModel: EventViewModel, navController: NavController, modifier: Modifier = Modifier) {
+fun EventListView(
+    eventViewModel: EventViewModel,
+    navController: NavController,
+    auth: FirebaseAuth,
+    modifier: Modifier = Modifier
+) {
     val context = LocalContext.current
     var isLoading by remember { mutableStateOf(true) }
 
     LaunchedEffect(Unit) {
-        eventViewModel.loadEvents(
-            onSuccess = { isLoading = false },
-            onError = {
-                Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
-                isLoading = false
-            }
-        )
+        eventViewModel.loadUserCities(auth) {
+            eventViewModel.loadEvents(
+                onSuccess = { isLoading = false },
+                onError = {
+                    Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
+                    isLoading = false
+                }
+            )
+        }
     }
 
     if (isLoading) {
-        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
             CircularProgressIndicator()
         }
     } else {
@@ -49,7 +60,6 @@ fun EventListView(eventViewModel: EventViewModel, navController: NavController, 
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-
             item {
                 FilterDropdowns(eventViewModel)
                 Spacer(Modifier.height(12.dp))
@@ -68,9 +78,6 @@ fun FilterDropdowns(eventViewModel: EventViewModel) {
     val types = remember { mutableStateListOf<String>() }
     val cities = remember { mutableStateListOf<String>() }
 
-    var selectedType by remember { mutableStateOf(eventViewModel.selectedType) }
-    var selectedCity by remember { mutableStateOf(eventViewModel.selectedCity) }
-
     var typeExpanded by remember { mutableStateOf(false) }
     var cityExpanded by remember { mutableStateOf(false) }
 
@@ -80,12 +87,6 @@ fun FilterDropdowns(eventViewModel: EventViewModel) {
 
         cities.clear()
         eventViewModel.events.map { it.cityName }.distinct().let { cities.addAll(it) }
-    }
-
-    // 🟢 Observer le ViewModel pour MAJ si l’utilisateur change les filtres ailleurs
-    LaunchedEffect(eventViewModel.selectedType, eventViewModel.selectedCity) {
-        selectedType = eventViewModel.selectedType
-        selectedCity = eventViewModel.selectedCity
     }
 
     Column(
@@ -100,7 +101,7 @@ fun FilterDropdowns(eventViewModel: EventViewModel) {
             onExpandedChange = { typeExpanded = !typeExpanded }
         ) {
             TextField(
-                value = selectedType ?: "Tous les types",
+                value = eventViewModel.selectedType ?: "Tous les types",
                 onValueChange = {},
                 readOnly = true,
                 label = { Text("Type") },
@@ -115,18 +116,16 @@ fun FilterDropdowns(eventViewModel: EventViewModel) {
                 DropdownMenuItem(
                     text = { Text("Tous les types") },
                     onClick = {
-                        selectedType = null
+                        eventViewModel.setFilter(null, eventViewModel.selectedCities)
                         typeExpanded = false
-                        eventViewModel.setFilter(selectedType, selectedCity)
                     }
                 )
                 types.forEach { type ->
                     DropdownMenuItem(
                         text = { Text(type) },
                         onClick = {
-                            selectedType = type
+                            eventViewModel.setFilter(type, eventViewModel.selectedCities)
                             typeExpanded = false
-                            eventViewModel.setFilter(selectedType, selectedCity)
                         }
                     )
                 }
@@ -135,13 +134,14 @@ fun FilterDropdowns(eventViewModel: EventViewModel) {
 
         Spacer(Modifier.height(8.dp))
 
-        // 🔹 Dropdown City
+        // 🔹 Dropdown Villes
         ExposedDropdownMenuBox(
             expanded = cityExpanded,
             onExpandedChange = { cityExpanded = !cityExpanded }
         ) {
             TextField(
-                value = selectedCity ?: "Toutes les villes",
+                value = if (eventViewModel.selectedCities.isEmpty()) "Toutes les villes"
+                else eventViewModel.selectedCities.joinToString(),
                 onValueChange = {},
                 readOnly = true,
                 label = { Text("Ville") },
@@ -156,26 +156,33 @@ fun FilterDropdowns(eventViewModel: EventViewModel) {
                 DropdownMenuItem(
                     text = { Text("Toutes les villes") },
                     onClick = {
-                        selectedCity = null
+                        eventViewModel.setFilter(eventViewModel.selectedType, emptyList())
                         cityExpanded = false
-                        eventViewModel.setFilter(selectedType, selectedCity)
                     }
                 )
                 cities.forEach { city ->
                     DropdownMenuItem(
-                        text = { Text(city) },
-                        onClick = {
-                            selectedCity = city
-                            cityExpanded = false
-                            eventViewModel.setFilter(selectedType, selectedCity)
-                        }
+                        text = {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Checkbox(
+                                    checked = city in eventViewModel.selectedCities,
+                                    onCheckedChange = { checked ->
+                                        val newCities = if (checked) eventViewModel.selectedCities + city
+                                        else eventViewModel.selectedCities - city
+                                        eventViewModel.setFilter(eventViewModel.selectedType, newCities)
+                                    }
+                                )
+                                Spacer(Modifier.width(8.dp))
+                                Text(city)
+                            }
+                        },
+                        onClick = {} // l'interaction se fait via la checkbox
                     )
                 }
             }
         }
     }
 }
-
 
 @Composable
 fun EventCard(event: EventUI, navController: NavController) {
@@ -190,60 +197,51 @@ fun EventCard(event: EventUI, navController: NavController) {
         shape = RoundedCornerShape(20.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
     ) {
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 8.dp)
-                .heightIn(min = 280.dp),
-            shape = RoundedCornerShape(20.dp),
-            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
-        ) {
-            Box {
-                AsyncImage(
-                    model = event.imageUrl ?: "https://wallpaperbat.com/img/869012-aesthetic-green-background-minimalist-image-free-photo-png-stickers-wallpaper-background.jpg",
-                    contentDescription = event.name,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(180.dp),
-                    contentScale = ContentScale.Crop
-                )
+        Box {
+            AsyncImage(
+                model = event.imageUrl ?: "https://wallpaperbat.com/img/869012-aesthetic-green-background-minimalist-image-free-photo-png-stickers-wallpaper-background.jpg",
+                contentDescription = event.name,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(180.dp),
+                contentScale = ContentScale.Crop
+            )
 
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(180.dp)
-                        .background(
-                            Brush.verticalGradient(
-                                colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.7f))
-                            )
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(180.dp)
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.7f))
                         )
-                )
+                    )
+            )
 
-                Column(
-                    modifier = Modifier
-                        .align(Alignment.BottomStart)
-                        .padding(16.dp)
-                ) {
-                    Text(event.name, style = MaterialTheme.typography.titleLarge.copy(color = Color.White))
-                    Text("${event.place} • ${event.cityName}", style = MaterialTheme.typography.bodyMedium.copy(color = Color.LightGray))
-                }
+            Column(
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .padding(16.dp)
+            ) {
+                Text(event.name, style = MaterialTheme.typography.titleLarge.copy(color = Color.White))
+                Text("${event.place} • ${event.cityName}", style = MaterialTheme.typography.bodyMedium.copy(color = Color.LightGray))
             }
+        }
 
-            Column(modifier = Modifier.padding(16.dp)) {
-                Text(event.date, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(event.date, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
 
-                if (event.types.isNotEmpty()) {
-                    Spacer(Modifier.height(6.dp))
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        event.types.forEach { type ->
-                            AssistChip(onClick = {}, label = { Text(type) })
-                        }
+            if (event.types.isNotEmpty()) {
+                Spacer(Modifier.height(6.dp))
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    event.types.forEach { type ->
+                        AssistChip(onClick = {}, label = { Text(type) })
                     }
                 }
-
-                Spacer(Modifier.height(8.dp))
-                Text(event.description, style = MaterialTheme.typography.bodyMedium, maxLines = 3, overflow = TextOverflow.Ellipsis)
             }
+
+            Spacer(Modifier.height(8.dp))
+            Text(event.description, style = MaterialTheme.typography.bodyMedium, maxLines = 3, overflow = TextOverflow.Ellipsis)
         }
     }
 }

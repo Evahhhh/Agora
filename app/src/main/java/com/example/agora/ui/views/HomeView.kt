@@ -13,6 +13,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.agora.viewmodel.EventViewModel
+import com.google.firebase.auth.FirebaseAuth
 
 @Composable
 fun HomeScreen() {
@@ -42,9 +43,9 @@ fun HomeScreen() {
                 viewModel = viewModel(),
                 modifier = Modifier.padding(innerPadding)
             )
-            2 -> SettingsView(Modifier.padding(innerPadding))
             1 -> {
-                // NavHost pour la section Événements
+                val auth = FirebaseAuth.getInstance()
+
                 NavHost(
                     navController = navController,
                     startDestination = "event_list",
@@ -53,15 +54,21 @@ fun HomeScreen() {
                     composable("event_list") {
                         EventListView(
                             eventViewModel = eventViewModel,
-                            navController = navController
+                            navController = navController,
+                            auth = auth // 🔹 Passe auth ici
                         )
                     }
                     composable("event_detail/{eventId}") { backStackEntry ->
                         val eventId = backStackEntry.arguments?.getString("eventId") ?: return@composable
-                        EventDetailView(eventId = eventId, eventViewModel = eventViewModel, navController = navController)
+                        EventDetailView(
+                            eventId = eventId,
+                            eventViewModel = eventViewModel,
+                            navController = navController
+                        )
                     }
                 }
             }
+            2 -> SettingsView(Modifier.padding(innerPadding))
         }
     }
 }

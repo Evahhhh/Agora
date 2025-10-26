@@ -8,6 +8,10 @@ import kotlinx.coroutines.tasks.await
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
+import com.google.firebase.auth.FirebaseAuth
+import java.util.Date
+import java.text.SimpleDateFormat
+import java.util.Locale
 
 data class EventUI(
     val id: String,
@@ -18,7 +22,8 @@ data class EventUI(
     val cityName: String,
     val departmentName: String,
     val types: List<String>,
-    val imageUrl: String? = null
+    val imageUrl: String? = null,
+    val timestamp: Date
 )
 
 class EventViewModel : ViewModel() {
@@ -32,7 +37,7 @@ class EventViewModel : ViewModel() {
 
     // Valeurs de filtre
     var selectedType: String? by mutableStateOf(null)
-    var selectedCity: String? by mutableStateOf(null)
+    var selectedCities: List<String> by mutableStateOf(emptyList())
 
     fun loadEvents(onSuccess: () -> Unit, onError: (String) -> Unit) {
         viewModelScope.launch {
@@ -44,7 +49,8 @@ class EventViewModel : ViewModel() {
                     val name = doc.getString("name") ?: "Sans nom"
                     val description = doc.getString("description") ?: ""
                     val place = doc.getString("place") ?: ""
-                    val date = doc.getTimestamp("date")?.toDate()?.toString() ?: "Date inconnue"
+                    val timestamp = doc.getTimestamp("date")?.toDate() ?: Date()
+                    val dateStr = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(timestamp)
 
                     // Ville + département
                     val cityRef = doc.getDocumentReference("city")
@@ -84,7 +90,8 @@ class EventViewModel : ViewModel() {
                             name = name,
                             description = description,
                             place = place,
-                            date = date,
+                            date = dateStr,
+                            timestamp = timestamp,
                             cityName = cityName,
                             departmentName = departmentName,
                             types = typeNames,
@@ -93,8 +100,7 @@ class EventViewModel : ViewModel() {
                     )
                 }
 
-                // 🔹 Tri décroissant par date
-                events = list.sortedByDescending { it.date }
+                events = list.sortedBy { it.timestamp }
                 applyFilters()
                 onSuccess()
             } catch (e: Exception) {
@@ -106,17 +112,16 @@ class EventViewModel : ViewModel() {
     fun applyFilters() {
         filteredEvents = events.filter { event ->
             val matchType = selectedType?.let { it in event.types } ?: true
-            val matchCity = selectedCity?.let { it == event.cityName } ?: true
+            val matchCity = if (selectedCities.isEmpty()) true else event.cityName in selectedCities
             matchType && matchCity
         }
     }
 
-    fun setFilter(type: String? = null, city: String? = null) {
+    fun setFilter(type: String? = null, cities: List<String> = emptyList()) {
         selectedType = type
-        selectedCity = city
+        selectedCities = cities
         applyFilters()
     }
-
 
     suspend fun loadEventPhotos(eventId: String): List<String> {
         val photos = mutableListOf<String>()
@@ -142,5 +147,32 @@ class EventViewModel : ViewModel() {
         return photos
     }
 
+    fun loadUserCities(auth: FirebaseAuth, onComplete: () -> Unit = {}) {
+        viewModelScope.launch {
+            try {
+                val uid = auth.currentUser?.uid
+                if (uid == null) {
+                    onComplete()
+                    return@launch
+                }
+
+                val userDoc = db.collection("user").document(uid).get().await()
+                val cityIds = userDoc.get("cities") as? List<String> ?: emptyList()
+
+                val citiesList = mutableListOf<String>()
+                for (cityId in cityIds) {
+                    val cityDoc = db.collection("city").document(cityId).get().await()
+                    cityDoc.getString("name")?.let { citiesList.add(it) }
+                }
+
+                selectedCities = citiesList
+                applyFilters()
+                onComplete()
+            } catch (e: Exception) {
+                e.printStackTrace()
+                onComplete()
+            }
+        }
+    }
 
 }

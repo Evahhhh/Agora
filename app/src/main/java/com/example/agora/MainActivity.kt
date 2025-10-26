@@ -16,8 +16,6 @@ class MainActivity : ComponentActivity() {
                 val authViewModel: AuthViewModel = viewModel()
                 AuthScreen(authViewModel)
             }
-
-
         }
     }
 }
