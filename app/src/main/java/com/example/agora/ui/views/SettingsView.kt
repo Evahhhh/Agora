@@ -64,21 +64,21 @@ fun SettingsView(modifier: Modifier = Modifier, viewModel: SettingsViewModel = v
                 CircularProgressIndicator()
             } else {
                 Text("Villes de rattachement", style = MaterialTheme.typography.titleMedium)
-                viewModel.allCities.forEach { (name, id) ->
+                viewModel.allCities.forEach { (name, ref) ->
                     Row(
                         Modifier
                             .fillMaxWidth()
                             .clickable {
-                                viewModel.toggleCitySelection(id)
+                                viewModel.toggleCitySelection(ref)
                             }
                             .padding(vertical = 4.dp),
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Text(name)
                         Checkbox(
-                            checked = viewModel.userCities.contains(id),
+                            checked = viewModel.userCities.contains(ref),
                             onCheckedChange = {
-                                viewModel.toggleCitySelection(id)
+                                viewModel.toggleCitySelection(ref)
                             }
                         )
                     }

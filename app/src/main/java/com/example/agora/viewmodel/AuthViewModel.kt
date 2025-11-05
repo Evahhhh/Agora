@@ -49,19 +49,23 @@ class AuthViewModel : ViewModel() {
         email: String,
         password: String,
         selectedCities: List<String>,
-        onSuccess: ()->Unit,
-        onError: (String)->Unit
+        onSuccess: () -> Unit,
+        onError: (String) -> Unit
     ) {
         auth.createUserWithEmailAndPassword(email, password)
             .addOnSuccessListener { result ->
                 val userId = result.user?.uid ?: return@addOnSuccessListener
+                val cityRefs = selectedCities.map { cityId ->
+                    db.collection("city").document(cityId)
+                }
+
                 val userMap = hashMapOf(
                     "id" to userId,
                     "firstname" to firstname,
                     "lastname" to lastname,
                     "email" to email,
-                    "cities" to selectedCities,
-                    "isAdmin" to false // <-- Champ ajouté par défaut à false
+                    "cities" to cityRefs,
+                    "isAdmin" to false
                 )
                 db.collection("user").document(userId).set(userMap)
                     .addOnSuccessListener { onSuccess() }

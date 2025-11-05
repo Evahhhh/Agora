@@ -11,6 +11,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import java.util.Date
 import com.google.firebase.Timestamp
+import com.google.firebase.firestore.DocumentReference
 
 data class UserEvent(
     val id: String,
@@ -26,10 +27,10 @@ class SettingsViewModel : ViewModel() {
     var userName by mutableStateOf("Utilisateur")
         private set
 
-    var userCities by mutableStateOf<List<String>>(emptyList())
+    var userCities by mutableStateOf<List<DocumentReference>>(emptyList())
         private set
 
-    var allCities by mutableStateOf<List<Pair<String,String>>>(emptyList())
+    var allCities by mutableStateOf<List<Pair<String, DocumentReference>>>(emptyList())
         private set
 
     var userEvents by mutableStateOf<List<UserEvent>>(emptyList())
@@ -53,12 +54,13 @@ class SettingsViewModel : ViewModel() {
 
                 val userDoc = db.collection("user").document(uid).get().await()
                 userName = userDoc.getString("firstname") ?: "Utilisateur"
-                userCities = (userDoc.get("cities") as? List<String>) ?: emptyList()
+
+                userCities = (userDoc.get("cities") as? List<DocumentReference>) ?: emptyList()
 
                 val cityDocs = db.collection("city").get().await()
                 allCities = cityDocs.mapNotNull { doc ->
                     val name = doc.getString("name") ?: return@mapNotNull null
-                    name to doc.id
+                    name to doc.reference
                 }
 
                 val eventsQuery = db.collection("event")
@@ -90,8 +92,8 @@ class SettingsViewModel : ViewModel() {
         }
     }
 
-    fun toggleCitySelection(cityId: String) {
-        userCities = if (userCities.contains(cityId)) userCities - cityId else userCities + cityId
+    fun toggleCitySelection(cityRef: DocumentReference) {
+        userCities = if (userCities.contains(cityRef)) userCities - cityRef else userCities + cityRef
     }
 
     fun updateCities(auth: FirebaseAuth) {
