@@ -47,7 +47,6 @@ class AddEventViewModel : ViewModel() {
     private fun loadCitiesAndTypes() {
         viewModelScope.launch {
             try {
-                // --- Charger les villes ---
                 val cityDocs = db.collection("city").get().await()
                 val cityList = mutableListOf<CityUI>()
                 for (cityDoc in cityDocs) {
@@ -63,7 +62,6 @@ class AddEventViewModel : ViewModel() {
                 }
                 _cities.value = cityList.sortedBy { it.name }
 
-                // --- Charger les types ---
                 val typeDocs = db.collection("type").get().await()
                 val typeList = typeDocs.map {
                     TypeUI(
@@ -103,12 +101,10 @@ class AddEventViewModel : ViewModel() {
             try {
                 _loading.value = true
 
-                // --- Convertir la date ---
                 val format = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault())
                 val parsedDate = format.parse("$date $time") ?: Date()
                 val timestamp = Timestamp(parsedDate)
 
-                // --- Préparer les références ---
                 val eventRef = db.collection("event").document()
                 val cityRef = db.collection("city").document(cityId)
                 val typeRefs = selectedTypeIds.map { db.collection("type").document(it) }

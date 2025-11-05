@@ -1,27 +1,21 @@
 package com.example.agora.ui.views
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.example.agora.viewmodel.EventViewModel
@@ -86,7 +80,29 @@ fun EventDetailView(
         Spacer(Modifier.height(16.dp))
 
         Column(modifier = Modifier.padding(16.dp)) {
-            Text(event.name, style = MaterialTheme.typography.titleLarge)
+            if (event.isPromoted) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(event.name, style = MaterialTheme.typography.titleLarge)
+                    Icon(
+                        imageVector = Icons.Filled.Star,
+                        contentDescription = "Événement mis en avant",
+                        tint = Color(0xFFFFD700),
+                        modifier = Modifier.size(32.dp) // étoile plus grande
+                    )
+                }
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    "Événement mis en avant par le créateur ⭐",
+                    color = Color(0xFFFFD700),
+                    fontSize = 14.sp
+                )
+            } else {
+                Text(event.name, style = MaterialTheme.typography.titleLarge)
+            }
+
             Text("${event.place} • ${event.cityName}", style = MaterialTheme.typography.bodyMedium)
             Spacer(Modifier.height(8.dp))
             Text(event.date, style = MaterialTheme.typography.bodySmall)

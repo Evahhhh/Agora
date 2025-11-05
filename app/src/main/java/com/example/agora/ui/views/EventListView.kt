@@ -23,6 +23,8 @@ import com.example.agora.viewmodel.EventViewModel
 import androidx.compose.foundation.layout.FlowRow
 import androidx.navigation.NavController
 import com.google.firebase.auth.FirebaseAuth
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Star
 
 @Composable
 fun EventListView(
@@ -35,7 +37,7 @@ fun EventListView(
     var isLoading by remember { mutableStateOf(true) }
 
     LaunchedEffect(Unit) {
-        eventViewModel.loadUserCities(auth) {
+        if (eventViewModel.events.isEmpty()) {
             eventViewModel.loadEvents(
                 onSuccess = { isLoading = false },
                 onError = {
@@ -43,14 +45,13 @@ fun EventListView(
                     isLoading = false
                 }
             )
+        } else {
+            isLoading = false
         }
     }
 
     if (isLoading) {
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
-        ) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             CircularProgressIndicator()
         }
     } else {
@@ -72,6 +73,73 @@ fun EventListView(
     }
 }
 
+@Composable
+fun EventCard(event: EventUI, navController: NavController) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 8.dp)
+            .heightIn(min = 280.dp)
+            .clickable { navController.navigate("event_detail/${event.id}") },
+        shape = RoundedCornerShape(20.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+    ) {
+        Box {
+            AsyncImage(
+                model = event.imageUrl ?: "https://wallpaperbat.com/img/869012-aesthetic-green-background-minimalist-image-free-photo-png-stickers-wallpaper-background.jpg",
+                contentDescription = event.name,
+                modifier = Modifier.fillMaxWidth().height(180.dp),
+                contentScale = ContentScale.Crop
+            )
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(180.dp)
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.7f))
+                        )
+                    )
+            )
+
+            if (event.isPromoted) {
+                Icon(
+                    imageVector = Icons.Default.Star,
+                    contentDescription = "Événement mis en avant",
+                    tint = Color(0xFFFFD700),
+                    modifier = Modifier
+                        .size(48.dp) // <- taille augmentée
+                        .align(Alignment.TopEnd)
+                        .padding(12.dp) // léger padding pour décaler de la bordure
+                )
+            }
+
+            Column(
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .padding(16.dp)
+            ) {
+                Text(event.name, style = MaterialTheme.typography.titleLarge.copy(color = Color.White))
+                Text("${event.place} • ${event.cityName}", style = MaterialTheme.typography.bodyMedium.copy(color = Color.LightGray))
+            }
+        }
+
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(event.date, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+
+            if (event.types.isNotEmpty()) {
+                Spacer(Modifier.height(6.dp))
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    event.types.forEach { type -> AssistChip(onClick = {}, label = { Text(type) }) }
+                }
+            }
+
+            Spacer(Modifier.height(8.dp))
+            Text(event.description, style = MaterialTheme.typography.bodyMedium, maxLines = 3, overflow = TextOverflow.Ellipsis)
+        }
+    }
+}
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FilterDropdowns(eventViewModel: EventViewModel) {
@@ -95,7 +163,6 @@ fun FilterDropdowns(eventViewModel: EventViewModel) {
             .background(Color(0xFFF0F0F0), RoundedCornerShape(12.dp))
             .padding(8.dp)
     ) {
-        // 🔹 Dropdown Type
         ExposedDropdownMenuBox(
             expanded = typeExpanded,
             onExpandedChange = { typeExpanded = !typeExpanded }
@@ -134,7 +201,6 @@ fun FilterDropdowns(eventViewModel: EventViewModel) {
 
         Spacer(Modifier.height(8.dp))
 
-        // 🔹 Dropdown Villes
         ExposedDropdownMenuBox(
             expanded = cityExpanded,
             onExpandedChange = { cityExpanded = !cityExpanded }
@@ -176,72 +242,10 @@ fun FilterDropdowns(eventViewModel: EventViewModel) {
                                 Text(city)
                             }
                         },
-                        onClick = {} // l'interaction se fait via la checkbox
+                        onClick = {}
                     )
                 }
             }
-        }
-    }
-}
-
-@Composable
-fun EventCard(event: EventUI, navController: NavController) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 8.dp)
-            .heightIn(min = 280.dp)
-            .clickable {
-                navController.navigate("event_detail/${event.id}")
-            },
-        shape = RoundedCornerShape(20.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
-    ) {
-        Box {
-            AsyncImage(
-                model = event.imageUrl ?: "https://wallpaperbat.com/img/869012-aesthetic-green-background-minimalist-image-free-photo-png-stickers-wallpaper-background.jpg",
-                contentDescription = event.name,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(180.dp),
-                contentScale = ContentScale.Crop
-            )
-
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(180.dp)
-                    .background(
-                        Brush.verticalGradient(
-                            colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.7f))
-                        )
-                    )
-            )
-
-            Column(
-                modifier = Modifier
-                    .align(Alignment.BottomStart)
-                    .padding(16.dp)
-            ) {
-                Text(event.name, style = MaterialTheme.typography.titleLarge.copy(color = Color.White))
-                Text("${event.place} • ${event.cityName}", style = MaterialTheme.typography.bodyMedium.copy(color = Color.LightGray))
-            }
-        }
-
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(event.date, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-
-            if (event.types.isNotEmpty()) {
-                Spacer(Modifier.height(6.dp))
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    event.types.forEach { type ->
-                        AssistChip(onClick = {}, label = { Text(type) })
-                    }
-                }
-            }
-
-            Spacer(Modifier.height(8.dp))
-            Text(event.description, style = MaterialTheme.typography.bodyMedium, maxLines = 3, overflow = TextOverflow.Ellipsis)
         }
     }
 }

@@ -17,6 +17,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.agora.viewmodel.AddEventViewModel
+import com.example.agora.viewmodel.EventViewModel
 import java.util.*
 
 fun Context.findActivity(): Activity? {
@@ -32,7 +33,8 @@ fun Context.findActivity(): Activity? {
 @Composable
 fun AddEventView(
     viewModel: AddEventViewModel = viewModel(),
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    eventViewModel: EventViewModel
 ) {
     val context = LocalContext.current
     val activity = context.findActivity() ?: return
@@ -42,7 +44,6 @@ fun AddEventView(
     val loading by viewModel.loading.collectAsState()
     val message by viewModel.message.collectAsState()
 
-    // Champs du formulaire
     var name by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
     var place by remember { mutableStateOf("") }
@@ -54,7 +55,6 @@ fun AddEventView(
 
     val calendar = Calendar.getInstance()
 
-    // Pickers
     val datePickerDialog = remember {
         DatePickerDialog(
             activity,
@@ -79,13 +79,11 @@ fun AddEventView(
         )
     }
 
-    // Affichage du message Toast
     LaunchedEffect(message) {
         message?.let {
             Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
             viewModel.clearMessage()
 
-            // Si succès, on peut réinitialiser les champs
             if (it.contains("succès")) {
                 name = ""
                 description = ""
@@ -95,6 +93,7 @@ fun AddEventView(
                 photoUrls = ""
                 selectedCity = null
                 selectedTypes = emptySet()
+                eventViewModel.loadEvents(onSuccess = {}, onError = {})
             }
         }
     }
@@ -112,7 +111,6 @@ fun AddEventView(
             Text("Ajouter un événement", style = MaterialTheme.typography.headlineSmall)
         }
 
-        // Nom
         item {
             OutlinedTextField(
                 value = name,
@@ -122,7 +120,6 @@ fun AddEventView(
             )
         }
 
-        // Lieu
         item {
             OutlinedTextField(
                 value = place,
@@ -132,7 +129,38 @@ fun AddEventView(
             )
         }
 
-        // Description
+        item {
+            var expanded by remember { mutableStateOf(false) }
+            ExposedDropdownMenuBox(
+                expanded = expanded,
+                onExpandedChange = { expanded = !expanded }
+            ) {
+                TextField(
+                    value = cities.find { it.id == selectedCity }?.let { "${it.name} (${it.departmentName})" }
+                        ?: "Sélectionner une ville",
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text("Ville") },
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) },
+                    modifier = Modifier.menuAnchor().fillMaxWidth()
+                )
+                ExposedDropdownMenu(
+                    expanded = expanded,
+                    onDismissRequest = { expanded = false }
+                ) {
+                    cities.forEach { city ->
+                        DropdownMenuItem(
+                            text = { Text("${city.name} (${city.departmentName})") },
+                            onClick = {
+                                selectedCity = city.id
+                                expanded = false
+                            }
+                        )
+                    }
+                }
+            }
+        }
+
         item {
             OutlinedTextField(
                 value = description,
@@ -143,7 +171,6 @@ fun AddEventView(
             )
         }
 
-        // Date et Heure
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Box(
@@ -177,7 +204,6 @@ fun AddEventView(
             }
         }
 
-        // URLs photos
         item {
             OutlinedTextField(
                 value = photoUrls,
@@ -188,40 +214,6 @@ fun AddEventView(
             )
         }
 
-        // Ville
-        item {
-            var expanded by remember { mutableStateOf(false) }
-            ExposedDropdownMenuBox(
-                expanded = expanded,
-                onExpandedChange = { expanded = !expanded }
-            ) {
-                TextField(
-                    value = cities.find { it.id == selectedCity }?.let { "${it.name} (${it.departmentName})" }
-                        ?: "Sélectionner une ville",
-                    onValueChange = {},
-                    readOnly = true,
-                    label = { Text("Ville") },
-                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) },
-                    modifier = Modifier.menuAnchor().fillMaxWidth()
-                )
-                ExposedDropdownMenu(
-                    expanded = expanded,
-                    onDismissRequest = { expanded = false }
-                ) {
-                    cities.forEach { city ->
-                        DropdownMenuItem(
-                            text = { Text("${city.name} (${city.departmentName})") },
-                            onClick = {
-                                selectedCity = city.id
-                                expanded = false
-                            }
-                        )
-                    }
-                }
-            }
-        }
-
-        // Types
         item {
             Column {
                 Text("Types :", style = MaterialTheme.typography.titleSmall)
@@ -252,7 +244,6 @@ fun AddEventView(
             }
         }
 
-        // Bouton Ajouter
         item {
             Button(
                 onClick = {

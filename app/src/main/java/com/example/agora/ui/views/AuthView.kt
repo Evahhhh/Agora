@@ -22,8 +22,6 @@ import com.example.agora.viewmodel.AuthViewModel
 
 @Composable
 fun AuthScreen(authViewModel: AuthViewModel) {
-    val context = LocalContext.current
-    val scrollState = rememberScrollState()
     var selectedTab by remember { mutableStateOf(0) }
 
     Column(

@@ -23,7 +23,8 @@ data class EventUI(
     val departmentName: String,
     val types: List<String>,
     val imageUrl: String? = null,
-    val timestamp: Date
+    val timestamp: Date,
+    val isPromoted: Boolean = false
 )
 
 class EventViewModel : ViewModel() {
@@ -35,13 +36,18 @@ class EventViewModel : ViewModel() {
     var filteredEvents: List<EventUI> by mutableStateOf(emptyList())
         private set
 
-    // Valeurs de filtre
     var selectedType: String? by mutableStateOf(null)
     var selectedCities: List<String> by mutableStateOf(emptyList())
 
     fun loadEvents(onSuccess: () -> Unit, onError: (String) -> Unit) {
         viewModelScope.launch {
             try {
+                val payments = db.collection("payment").get().await()
+                val promotedEventIds = payments.mapNotNull {
+                    val ref = it.getDocumentReference("event")
+                    ref?.id
+                }.toSet()
+
                 val eventDocs = db.collection("event").get().await()
                 val list = mutableListOf<EventUI>()
 
@@ -52,7 +58,8 @@ class EventViewModel : ViewModel() {
                     val timestamp = doc.getTimestamp("date")?.toDate() ?: Date()
                     val dateStr = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(timestamp)
 
-                    // Ville + département
+                    if (timestamp.before(Date())) continue
+
                     val cityRef = doc.getDocumentReference("city")
                     var cityName = "Inconnue"
                     var departmentName = "Inconnu"
@@ -66,7 +73,6 @@ class EventViewModel : ViewModel() {
                         }
                     }
 
-                    // Types
                     val typeRefs = doc.get("types") as? List<*> ?: emptyList<Any>()
                     val typeNames = mutableListOf<String>()
                     for (typeRef in typeRefs) {
@@ -74,7 +80,6 @@ class EventViewModel : ViewModel() {
                         ref?.get()?.await()?.getString("name")?.let { typeNames.add(it) }
                     }
 
-                    // Image
                     val photoQuery = db.collection("photo")
                         .whereEqualTo("event", doc.reference)
                         .limit(1)
@@ -83,6 +88,8 @@ class EventViewModel : ViewModel() {
                     val imageUrl = if (photoQuery.documents.isNotEmpty()) {
                         photoQuery.documents.first().getString("file_url")
                     } else null
+
+                    val isPromoted = doc.id in promotedEventIds
 
                     list.add(
                         EventUI(
@@ -95,7 +102,8 @@ class EventViewModel : ViewModel() {
                             cityName = cityName,
                             departmentName = departmentName,
                             types = typeNames,
-                            imageUrl = imageUrl
+                            imageUrl = imageUrl,
+                            isPromoted = isPromoted
                         )
                     )
                 }
@@ -114,7 +122,7 @@ class EventViewModel : ViewModel() {
             val matchType = selectedType?.let { it in event.types } ?: true
             val matchCity = if (selectedCities.isEmpty()) true else event.cityName in selectedCities
             matchType && matchCity
-        }
+        }.sortedWith(compareByDescending<EventUI> { it.isPromoted }.thenBy { it.timestamp })
     }
 
     fun setFilter(type: String? = null, cities: List<String> = emptyList()) {
@@ -147,15 +155,25 @@ class EventViewModel : ViewModel() {
         return photos
     }
 
-    fun loadUserCities(auth: FirebaseAuth, onComplete: () -> Unit = {}) {
+    fun refreshPromotedStatus(onComplete: () -> Unit = {}) {
         viewModelScope.launch {
             try {
-                val uid = auth.currentUser?.uid
-                if (uid == null) {
-                    onComplete()
-                    return@launch
-                }
+                val payments = db.collection("payment").get().await()
+                val promotedEventIds = payments.mapNotNull { it.getDocumentReference("event")?.id }.toSet()
+                events = events.map { it.copy(isPromoted = it.id in promotedEventIds) }
+                applyFilters()
+            } catch (e: Exception) {
+                e.printStackTrace()
+            } finally {
+                onComplete()
+            }
+        }
+    }
 
+    fun refreshUserCities(auth: FirebaseAuth, onComplete: () -> Unit = {}) {
+        viewModelScope.launch {
+            try {
+                val uid = auth.currentUser?.uid ?: return@launch
                 val userDoc = db.collection("user").document(uid).get().await()
                 val cityIds = userDoc.get("cities") as? List<String> ?: emptyList()
 
@@ -165,8 +183,11 @@ class EventViewModel : ViewModel() {
                     cityDoc.getString("name")?.let { citiesList.add(it) }
                 }
 
-                selectedCities = citiesList
-                applyFilters()
+                if (citiesList != selectedCities) {
+                    selectedCities = citiesList
+                    applyFilters()
+                }
+
                 onComplete()
             } catch (e: Exception) {
                 e.printStackTrace()
@@ -174,5 +195,4 @@ class EventViewModel : ViewModel() {
             }
         }
     }
-
 }

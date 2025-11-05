@@ -7,7 +7,6 @@ import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 
-
 class AuthViewModel : ViewModel() {
     private val auth = FirebaseAuth.getInstance()
     private val db = FirebaseFirestore.getInstance()
@@ -44,7 +43,15 @@ class AuthViewModel : ViewModel() {
             .addOnFailureListener { onError(it.message ?: "Erreur inconnue") }
     }
 
-    fun register(firstname:String, lastname:String, email:String, password:String, selectedCities: List<String>, onSuccess: ()->Unit, onError: (String)->Unit) {
+    fun register(
+        firstname: String,
+        lastname: String,
+        email: String,
+        password: String,
+        selectedCities: List<String>,
+        onSuccess: ()->Unit,
+        onError: (String)->Unit
+    ) {
         auth.createUserWithEmailAndPassword(email, password)
             .addOnSuccessListener { result ->
                 val userId = result.user?.uid ?: return@addOnSuccessListener
@@ -53,7 +60,8 @@ class AuthViewModel : ViewModel() {
                     "firstname" to firstname,
                     "lastname" to lastname,
                     "email" to email,
-                    "cities" to selectedCities
+                    "cities" to selectedCities,
+                    "isAdmin" to false // <-- Champ ajouté par défaut à false
                 )
                 db.collection("user").document(userId).set(userMap)
                     .addOnSuccessListener { onSuccess() }

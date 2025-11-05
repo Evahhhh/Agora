@@ -17,10 +17,11 @@ import com.google.firebase.auth.FirebaseAuth
 
 @Composable
 fun HomeScreen() {
-    var selectedItem by remember { mutableStateOf(1) } // par défaut sur Événements
+    var selectedItem by remember { mutableStateOf(1) }
     val items = listOf("Ajouter", "Événements", "Mon Compte")
     val icons = listOf(Icons.Default.Add, Icons.AutoMirrored.Filled.List, Icons.Default.AccountCircle)
     val eventViewModel: EventViewModel = viewModel()
+
 
     val navController = rememberNavController()
 
@@ -41,10 +42,19 @@ fun HomeScreen() {
         when (selectedItem) {
             0 -> AddEventView(
                 viewModel = viewModel(),
-                modifier = Modifier.padding(innerPadding)
+                modifier = Modifier.padding(innerPadding),
+                eventViewModel = eventViewModel
             )
+
             1 -> {
                 val auth = FirebaseAuth.getInstance()
+
+                LaunchedEffect(selectedItem) {
+                    if (selectedItem == 1) {
+                        eventViewModel.refreshUserCities(auth)
+                        eventViewModel.refreshPromotedStatus()
+                    }
+                }
 
                 NavHost(
                     navController = navController,
@@ -55,11 +65,12 @@ fun HomeScreen() {
                         EventListView(
                             eventViewModel = eventViewModel,
                             navController = navController,
-                            auth = auth // 🔹 Passe auth ici
+                            auth = auth
                         )
                     }
                     composable("event_detail/{eventId}") { backStackEntry ->
-                        val eventId = backStackEntry.arguments?.getString("eventId") ?: return@composable
+                        val eventId =
+                            backStackEntry.arguments?.getString("eventId") ?: return@composable
                         EventDetailView(
                             eventId = eventId,
                             eventViewModel = eventViewModel,
@@ -68,7 +79,7 @@ fun HomeScreen() {
                     }
                 }
             }
-            2 -> SettingsView(Modifier.padding(innerPadding))
+            2 -> SettingsView(modifier = Modifier.padding(innerPadding))
         }
     }
 }
