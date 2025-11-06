@@ -17,6 +17,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.agora.MainActivity
+import com.example.agora.EditEventActivity
 import com.example.agora.viewmodel.SettingsViewModel
 import com.google.firebase.auth.FirebaseAuth
 import java.text.SimpleDateFormat
@@ -146,6 +147,17 @@ fun SettingsView(modifier: Modifier = Modifier, viewModel: SettingsViewModel = v
 
                                     Spacer(Modifier.height(8.dp))
 
+                                    if (event.isHighlighted) {
+                                        Text(
+                                            "Événement mis en avant ⭐",
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color.White,
+                                            modifier = Modifier
+                                                .background(Color(0xFFFFA000), shape = RoundedCornerShape(4.dp))
+                                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                                        )
+                                    }
+
                                     if (!event.isHighlighted && !isPast) {
                                         Button(
                                             onClick = {
@@ -160,15 +172,16 @@ fun SettingsView(modifier: Modifier = Modifier, viewModel: SettingsViewModel = v
                                         }
                                     }
 
-                                    if (event.isHighlighted) {
-                                        Text(
-                                            "Événement mis en avant ⭐",
-                                            fontWeight = FontWeight.Bold,
-                                            color = Color.White,
-                                            modifier = Modifier
-                                                .background(Color(0xFFFFA000), shape = RoundedCornerShape(4.dp))
-                                                .padding(horizontal = 6.dp, vertical = 2.dp)
-                                        )
+                                    Button(
+                                        onClick = {
+                                            val intent = Intent(context, EditEventActivity::class.java)
+                                            intent.putExtra("eventId", event.id)
+                                            context.startActivity(intent)
+                                        },
+                                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2196F3)),
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Text("Modifier", color = Color.White)
                                     }
                                 }
                             }

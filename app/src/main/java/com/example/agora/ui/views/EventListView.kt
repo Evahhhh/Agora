@@ -37,6 +37,7 @@ fun EventListView(
     var isLoading by remember { mutableStateOf(true) }
 
     LaunchedEffect(Unit) {
+        eventViewModel.loadEvents(onSuccess = {}, onError = {})
         if (eventViewModel.events.isEmpty()) {
             eventViewModel.loadEvents(
                 onSuccess = { isLoading = false },
