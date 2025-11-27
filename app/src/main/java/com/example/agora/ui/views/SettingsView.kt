@@ -17,15 +17,18 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.agora.MainActivity
-import com.example.agora.EditEventActivity
 import com.example.agora.viewmodel.SettingsViewModel
 import com.google.firebase.auth.FirebaseAuth
-import java.text.SimpleDateFormat
+import com.example.agora.services.DateService
 import java.util.*
 import kotlinx.coroutines.launch
 
 @Composable
-fun SettingsView(modifier: Modifier = Modifier, viewModel: SettingsViewModel = viewModel()) {
+fun SettingsView(
+    modifier: Modifier = Modifier,
+    viewModel: SettingsViewModel = viewModel(),
+    onEditEvent: (String) -> Unit = {}
+) {
     val context = LocalContext.current
     val auth = FirebaseAuth.getInstance()
     val coroutineScope = rememberCoroutineScope()
@@ -102,7 +105,6 @@ fun SettingsView(modifier: Modifier = Modifier, viewModel: SettingsViewModel = v
                         items(viewModel.userEvents, key = { it.id }) { event ->
                             val now = Date()
                             val isPast = event.date?.before(now) ?: false
-                            val sdf = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault())
 
                             Card(
                                 modifier = Modifier
@@ -141,7 +143,7 @@ fun SettingsView(modifier: Modifier = Modifier, viewModel: SettingsViewModel = v
                                         color = if (isPast) Color.Gray else Color.Black
                                     )
                                     Text(
-                                        "Date : ${event.date?.let { sdf.format(it) } ?: "Inconnue"}",
+                                        "Date : ${event.date?.let { DateService.format(it) } ?: "Inconnue"}",
                                         color = if (isPast) Color.Gray else Color.Black
                                     )
 
@@ -174,9 +176,7 @@ fun SettingsView(modifier: Modifier = Modifier, viewModel: SettingsViewModel = v
 
                                     Button(
                                         onClick = {
-                                            val intent = Intent(context, EditEventActivity::class.java)
-                                            intent.putExtra("eventId", event.id)
-                                            context.startActivity(intent)
+                                            onEditEvent(event.id)
                                         },
                                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2196F3)),
                                         modifier = Modifier.fillMaxWidth()

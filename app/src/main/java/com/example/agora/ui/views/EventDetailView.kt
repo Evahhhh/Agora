@@ -6,6 +6,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -19,15 +20,19 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.example.agora.viewmodel.EventViewModel
+import com.google.firebase.auth.FirebaseAuth
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EventDetailView(
     eventId: String,
     eventViewModel: EventViewModel,
-    navController: NavController
+    navController: NavController,
+    onEditEvent: (String) -> Unit = {}
 ) {
     val event = eventViewModel.events.find { it.id == eventId }
+    val auth = FirebaseAuth.getInstance()
+    val currentUser = auth.currentUser
 
     if (event == null) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -51,6 +56,18 @@ fun EventDetailView(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = "Retour"
                     )
+                }
+            },
+            actions = {
+                if (currentUser != null && event.creatorId == currentUser.uid) {
+                    IconButton(onClick = {
+                        onEditEvent(eventId)
+                    }) {
+                        Icon(
+                            imageVector = Icons.Filled.Edit,
+                            contentDescription = "Modifier"
+                        )
+                    }
                 }
             }
         )

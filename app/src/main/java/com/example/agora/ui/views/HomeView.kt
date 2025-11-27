@@ -12,22 +12,26 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.example.agora.navigation.HomeNavHost
 import com.example.agora.viewmodel.EventViewModel
 import com.example.agora.viewmodel.AdminViewModel
 import com.google.firebase.auth.FirebaseAuth
 
 @Composable
-fun HomeScreen() {
+fun HomeScreen(initialTab: Int = 1, onEditEvent: (String) -> Unit = {}) {
     val auth = FirebaseAuth.getInstance()
     val eventViewModel: EventViewModel = viewModel()
     val adminViewModel: AdminViewModel = viewModel()
     val isAdmin by adminViewModel.isAdmin
     val navController = rememberNavController()
 
-    var selectedItem by remember { mutableStateOf(1) }
+    var selectedItem by remember { mutableStateOf(initialTab) }
+
+    // Update selectedItem if initialTab changes
+    LaunchedEffect(initialTab) {
+        selectedItem = initialTab
+    }
 
     val baseItems = listOf("Ajouter", "Événements", "Mon Compte")
     val baseIcons = listOf(Icons.Default.Add, Icons.AutoMirrored.Filled.List, Icons.Default.AccountCircle)
@@ -76,30 +80,19 @@ fun HomeScreen() {
                         eventViewModel.refreshPromotedStatus()
                     }
 
-                    NavHost(
+                    HomeNavHost(
                         navController = navController,
-                        startDestination = "event_list",
+                        eventViewModel = eventViewModel,
+                        auth = auth,
+                        onEditEvent = onEditEvent,
                         modifier = Modifier.fillMaxSize()
-                    ) {
-                        composable("event_list") {
-                            EventListView(
-                                eventViewModel = eventViewModel,
-                                navController = navController,
-                                auth = auth
-                            )
-                        }
-                        composable("event_detail/{eventId}") { backStackEntry ->
-                            val eventId = backStackEntry.arguments?.getString("eventId") ?: return@composable
-                            EventDetailView(
-                                eventId = eventId,
-                                eventViewModel = eventViewModel,
-                                navController = navController
-                            )
-                        }
-                    }
+                    )
                 }
 
-                2 + offset -> SettingsView(modifier = Modifier.fillMaxSize())
+                2 + offset -> SettingsView(
+                    modifier = Modifier.fillMaxSize(),
+                    onEditEvent = onEditEvent
+                )
             }
         }
     }

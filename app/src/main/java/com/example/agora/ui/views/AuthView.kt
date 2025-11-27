@@ -1,7 +1,6 @@
 package com.example.agora.ui.views
 
 import android.widget.Toast
-import android.content.Intent
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -17,11 +16,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
-import com.example.agora.HomeActivity
 import com.example.agora.viewmodel.AuthViewModel
 
 @Composable
-fun AuthScreen(authViewModel: AuthViewModel) {
+fun AuthScreen(authViewModel: AuthViewModel, onLoginSuccess: () -> Unit = {}) {
     var selectedTab by remember { mutableStateOf(0) }
 
     Column(
@@ -46,9 +44,9 @@ fun AuthScreen(authViewModel: AuthViewModel) {
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             if (selectedTab == 0) {
-                LoginForm(authViewModel)
+                LoginForm(authViewModel, onLoginSuccess)
             } else {
-                RegisterForm(authViewModel)
+                RegisterForm(authViewModel, onLoginSuccess)
             }
         }
 
@@ -56,7 +54,7 @@ fun AuthScreen(authViewModel: AuthViewModel) {
 }
 
 @Composable
-fun LoginForm(authViewModel: AuthViewModel) {
+fun LoginForm(authViewModel: AuthViewModel, onLoginSuccess: () -> Unit) {
     val context = LocalContext.current
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
@@ -68,8 +66,7 @@ fun LoginForm(authViewModel: AuthViewModel) {
         Spacer(Modifier.height(24.dp))
         Button(onClick = {
             authViewModel.login(email, password, onSuccess = {
-                context.startActivity(Intent(context, HomeActivity::class.java))
-                if (context is androidx.activity.ComponentActivity) context.finish()
+                onLoginSuccess()
             }, onError = { Toast.makeText(context, it, Toast.LENGTH_SHORT).show() })
         }, modifier = Modifier.fillMaxWidth()) {
             Text("Se connecter")
@@ -78,7 +75,7 @@ fun LoginForm(authViewModel: AuthViewModel) {
 }
 
 @Composable
-fun RegisterForm(authViewModel: AuthViewModel) {
+fun RegisterForm(authViewModel: AuthViewModel, onLoginSuccess: () -> Unit) {
     val context = LocalContext.current
     val scrollState = rememberScrollState()
     var firstname by remember { mutableStateOf("") }
@@ -175,8 +172,7 @@ fun RegisterForm(authViewModel: AuthViewModel) {
                     password,
                     selectedCities.toList(),
                     onSuccess = {
-                        context.startActivity(Intent(context, HomeActivity::class.java))
-                        if (context is androidx.activity.ComponentActivity) context.finish()
+                        onLoginSuccess()
                     },
                     onError = { Toast.makeText(context, it, Toast.LENGTH_SHORT).show() }
                 )

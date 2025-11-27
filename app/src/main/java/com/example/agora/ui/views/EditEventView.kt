@@ -16,7 +16,12 @@ import com.example.agora.viewmodel.EditEventViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun EditEventView(eventId: String, viewModel: EditEventViewModel = viewModel()) {
+fun EditEventView(
+    eventId: String,
+    viewModel: EditEventViewModel = viewModel(),
+    onBack: () -> Unit = {},
+    onSuccess: () -> Unit = {}
+) {
     val context = LocalContext.current
     val name by viewModel.name.collectAsState()
     val description by viewModel.description.collectAsState()
@@ -25,13 +30,19 @@ fun EditEventView(eventId: String, viewModel: EditEventViewModel = viewModel()) 
     val loading by viewModel.loading.collectAsState()
     val message by viewModel.message.collectAsState()
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(eventId) {
         viewModel.loadEvent(eventId)
     }
 
-    message?.let {
-        Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
-        viewModel.clearMessage()
+    LaunchedEffect(message) {
+        message?.let {
+            Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
+            if (it.contains("mis à jour")) { // Simple check or better use a specific state
+                // handled in onSuccess callback passed to updateEvent
+            } else {
+                 viewModel.clearMessage()
+            }
+        }
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
@@ -39,7 +50,7 @@ fun EditEventView(eventId: String, viewModel: EditEventViewModel = viewModel()) 
             title = { Text("Modifier l'événement") },
             navigationIcon = {
                 IconButton(onClick = {
-                    if (context is ComponentActivity) context.finish()
+                    onBack()
                 }) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
@@ -94,7 +105,7 @@ fun EditEventView(eventId: String, viewModel: EditEventViewModel = viewModel()) 
 
             Button(
                 onClick = {
-                    viewModel.updateEvent(eventId)
+                    viewModel.updateEvent(eventId, onSuccess)
                 },
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0077FF)),
                 modifier = Modifier.fillMaxWidth(),

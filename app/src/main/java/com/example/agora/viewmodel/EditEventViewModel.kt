@@ -8,7 +8,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import java.text.SimpleDateFormat
+import com.example.agora.services.DateService
 import java.util.*
 
 class EditEventViewModel : ViewModel() {
@@ -42,7 +42,7 @@ class EditEventViewModel : ViewModel() {
                 _place.value = doc.getString("place") ?: ""
                 val timestamp = doc.getTimestamp("date")?.toDate()
                 _date.value = timestamp?.let {
-                    SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(it)
+                    DateService.format(it)
                 } ?: ""
             } catch (e: Exception) {
                 _message.value = "Erreur : ${e.message}"
@@ -52,12 +52,11 @@ class EditEventViewModel : ViewModel() {
         }
     }
 
-    fun updateEvent(eventId: String) {
+    fun updateEvent(eventId: String, onSuccess: () -> Unit) {
         viewModelScope.launch {
             try {
                 _loading.value = true
-                val format = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault())
-                val parsedDate = format.parse(_date.value) ?: Date()
+                val parsedDate = DateService.parse(_date.value) ?: Date()
                 val timestamp = Timestamp(parsedDate)
 
                 db.collection("event").document(eventId)
@@ -71,6 +70,7 @@ class EditEventViewModel : ViewModel() {
                     ).await()
 
                 _message.value = "Événement mis à jour ✅"
+                onSuccess()
             } catch (e: Exception) {
                 _message.value = "Erreur lors de la mise à jour : ${e.message}"
             } finally {

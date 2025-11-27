@@ -8,10 +8,9 @@ import kotlinx.coroutines.tasks.await
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
+import com.example.agora.services.DateService
 import com.google.firebase.auth.FirebaseAuth
 import java.util.Date
-import java.text.SimpleDateFormat
-import java.util.Locale
 
 data class EventUI(
     val id: String,
@@ -24,7 +23,8 @@ data class EventUI(
     val types: List<String>,
     val imageUrl: String? = null,
     val timestamp: Date,
-    val isPromoted: Boolean = false
+    val isPromoted: Boolean = false,
+    val creatorId: String? = null
 )
 
 class EventViewModel : ViewModel() {
@@ -56,7 +56,7 @@ class EventViewModel : ViewModel() {
                     val description = doc.getString("description") ?: ""
                     val place = doc.getString("place") ?: ""
                     val timestamp = doc.getTimestamp("date")?.toDate() ?: Date()
-                    val dateStr = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(timestamp)
+                    val dateStr = DateService.format(timestamp)
 
                     if (timestamp.before(Date())) continue
 
@@ -90,6 +90,9 @@ class EventViewModel : ViewModel() {
                     } else null
 
                     val isPromoted = doc.id in promotedEventIds
+                    
+                    val creatorRef = doc.getDocumentReference("creator")
+                    val creatorId = creatorRef?.id
 
                     list.add(
                         EventUI(
@@ -103,7 +106,8 @@ class EventViewModel : ViewModel() {
                             departmentName = departmentName,
                             types = typeNames,
                             imageUrl = imageUrl,
-                            isPromoted = isPromoted
+                            isPromoted = isPromoted,
+                            creatorId = creatorId
                         )
                     )
                 }
